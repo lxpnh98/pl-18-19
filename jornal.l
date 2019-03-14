@@ -3,8 +3,6 @@
 #include <stdlib.h>
 %}
 
-%option yywrap
-
 %%
 
 .|\n {ECHO;}
