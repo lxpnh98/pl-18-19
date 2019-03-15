@@ -3,9 +3,18 @@
 #include <stdlib.h>
 %}
 
+%x PUB
+%x TAGS
+
 %%
 
-.|\n {ECHO;}
+\<pub\>         {BEGIN PUB; printf("<pub>\n");}
+<PUB>\<\/pub\>  {BEGIN INITIAL; printf("<\\pub>\n");}
+<PUB>\#TAG:     {BEGIN TAGS;printf("<tags>\n");}
+<TAGS>\n        {BEGIN PUB;printf("\n<\\tags>\n");}
+<PUB>.          {printf("text: '''%s'''\n", yytext);}
+<PUB>\n         {}
+<INITIAL>.|\n   {}
 
 %%
 
