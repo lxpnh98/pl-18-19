@@ -53,15 +53,20 @@ void tag_print(gpointer data, gpointer user_data) {
     printf("<tag>%s</tag>", ((GString *)data)->str);
 }
 
+int debug = 1;
 int line_num;
 
 void pub_print(void) {
-    if (strlen(pub->id->str) == 0) {
+    if (strlen(pub->id->str) == 0 && debug) {
         fprintf(stderr, "linha %d: post sem id\n", line_num);
         return;
     }
-    gchar *line_num_str = g_strdup_printf("%i", line_num);
-    printf("<pub id=%s line=%s>\n", pub->id->str, line_num_str);
+    if (debug) {
+        gchar *line_num_str = g_strdup_printf("%i", line_num);
+        printf("<pub id=%s line=%s>\n", pub->id->str, line_num_str);
+    } else {
+        printf("<pub id=%s>\n", pub->id->str);
+    }
     printf("<title>%s</title>\n", pub->title->str);
     printf("<author_date>%s</author_date>\n", pub->author_date->str);
     printf("<tags>\n");
@@ -71,8 +76,6 @@ void pub_print(void) {
     printf("<text>%s</text>\n", pub->text->str);
     printf("</pub>\n");
 }
-
-//TODO: opção debug (ativa line_num)
 
 //TODO: não incluir noticias repetidas
 
