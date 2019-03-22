@@ -56,11 +56,22 @@ void tag_print(gpointer data, gpointer user_data) {
 int debug = 1;
 int line_num;
 
+GHashTable *posts;
+
 void pub_print(void) {
-    if (strlen(pub->id->str) == 0 && debug) {
-        fprintf(stderr, "linha %d: post sem id\n", line_num);
+    if (strlen(pub->id->str) == 0) {
+        if (debug) {
+            fprintf(stderr, "linha %d: post sem id\n", line_num);
+        }
         return;
     }
+    if (g_hash_table_contains(posts, pub->id)) {
+        if (debug) {
+            fprintf(stderr, "%s repetido\n", pub->id->str);
+        }
+        return;
+    }
+    g_hash_table_add(posts, g_string_new(pub->id->str));
     if (debug) {
         gchar *line_num_str = g_strdup_printf("%i", line_num);
         printf("<pub id=%s line=%s>\n", pub->id->str, line_num_str);
@@ -77,14 +88,12 @@ void pub_print(void) {
     printf("</pub>\n");
 }
 
-//TODO: não incluir noticias repetidas
-
 //TODO: listar e contar tags (3.)
 
 /*TODO:
-    tag:
+    tag_a:
         <a href=post-????.html>titulo</a>
-    tag2:
+    tag_b:
         ...
     ...
 */
@@ -163,11 +172,24 @@ punc   [-+!?,.;:"']
 
 %%
 
+guint pub_hash(gconstpointer key) {
+    GString *id = (GString *)key;
+    int r = atoi(id->str + 5);
+    return (guint)r;
+}
+
+gboolean pub_equal(gconstpointer a, gconstpointer b) {
+    GString *id_a = (GString *)a;
+    GString *id_b = (GString *)b;
+    return (gboolean)(strcmp(id_a->str, id_b->str) == 0);
+}
+
 int yywrap() {
     return 1;
 }
 
 int main() {
+    posts = g_hash_table_new(pub_hash, pub_equal);
     yylex();
     return 0;
 }
