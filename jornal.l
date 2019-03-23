@@ -102,9 +102,11 @@ void print_html(FILE *html) {
     fprintf(html, "<h1>%s</h1>\n", pub->title->str);
 
     gchar **paragraphs = g_strsplit(pub->text->str, "\n\n", 0);
+    gchar **current = paragraphs;
     do {
-        fprintf(html, "<p>%s</p>\n", *paragraphs);
-    } while (*(++paragraphs));
+        fprintf(html, "<p>%s</p>\n", *current);
+    } while (*(++current));
+    g_strfreev(paragraphs);
     fprintf(html, "<hr>\n");
     fprintf(html, "<p>");
     g_sequence_foreach(pub->tags, tag_print_html, NULL);
@@ -136,20 +138,20 @@ void pub_print(void) {
     post->title = pub->title;
     g_sequence_foreach(pub->tags, tag_add_post, post);
 
-    // abrir ficheiro post-????.html
+    // criar ficheiro post-????.html
     GString *file = g_string_new(prefix->str);
     g_string_append(file, pub->id->str);
     g_string_append(file, ".html");
     html = fopen(file->str, "w");
+    g_string_free(file, TRUE);
+    print_html(html);
 
-    // abrir ficheiro post-????.xml
+    // criar ficheiro post-????.xml
     file = g_string_new(prefix->str);
     g_string_append(file, pub->id->str);
     g_string_append(file, ".xml");
     xml = fopen(file->str, "w");
-
     print_xml(xml);
-    print_html(html);
 
     g_string_free(file, TRUE);
     fclose(html);
@@ -194,6 +196,8 @@ punc   [-+!?,.;:"']
     gchar **strv = g_strsplit(yytext+5, "\n", 0);
     gchar *tag = g_strjoinv(" ", strv);
     g_sequence_append(pub->tags, g_string_new(tag));
+    g_strfreev(strv);
+    free(tag);
 }
 <PUB>#ID:\{/p {
     BEGIN ID;
@@ -216,7 +220,7 @@ punc   [-+!?,.;:"']
 <TITLE>.+ {
     g_string_assign(pub->title, yytext);
 }
-<SKIP>#DATE:\ \[.{5}]\ .+ {
+<SKIP>#DATE:\ \[.{5}\]\ .+ {
     g_string_assign(pub->author_date, yytext+15);
     BEGIN DATE;
 }
@@ -250,13 +254,12 @@ void post_print(gpointer post, gpointer user_data) {
 
 FILE *tag_count;
 
-gboolean print_tag_info(gpointer tag, gpointer posts, gpointer user_data) {
+void print_tag_info(gpointer tag, gpointer posts, gpointer user_data) {
     printf("<p><b>%s:</b></p>\n", ((GString *)tag)->str);
 
-    fprintf(tag_count, "%s - %d\n", ((GString *)tag)->str, g_sequence_get_length((GSequence *)posts));
+    fprintf(tag_count, "%s|%d\n", ((GString *)tag)->str, g_sequence_get_length((GSequence *)posts));
 
     g_sequence_foreach((GSequence *)posts, post_print, NULL);
-    return TRUE;
 }
 
 guint str_hash(gconstpointer a) {
@@ -272,7 +275,12 @@ gboolean str_equal(gconstpointer a, gconstpointer b) {
     return strcmp(((GString *)a)->str, ((GString *)b)->str) == 0;
 }
 
+void str_free(gpointer str) {
+    g_string_free((GString *)str, TRUE);
+}
+
 int main(int argc, char **argv) {
+    // process commandline arguments
     if (argc > 1) {
         prefix = g_string_new(argv[1]);
         if (prefix->str[strlen(prefix->str)-1] != '/') {
@@ -281,19 +289,26 @@ int main(int argc, char **argv) {
     } else {
         prefix = g_string_new("./");
     }
-    posts = g_hash_table_new(pub_hash, pub_equal);
+
+    // initialize data structures
+    posts = g_hash_table_new_full(pub_hash, pub_equal, str_free, NULL);
     tag_index = g_hash_table_new(str_hash, str_equal);
+
     yylex();
 
     // open tag_count file
     GString *file = g_string_new(prefix->str);
     g_string_append(file, "tag_count.txt");
     tag_count = fopen(file->str, "w");
+    g_string_free(file, TRUE);
 
     // print tag index to stdout
     printf("<!DOCTYPE html>\n<html>\n<body>\n<meta charset=\"UTF-8\">\n");
-    g_hash_table_foreach_remove(tag_index, print_tag_info, NULL);
+    g_hash_table_foreach(tag_index, print_tag_info, NULL);
     printf("</html>\n</body>\n");
+
+    // free data
+    g_hash_table_destroy(posts);
 
     return 0;
 }
