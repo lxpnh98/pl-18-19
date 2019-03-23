@@ -156,8 +156,6 @@ void pub_print(void) {
     fclose(xml);
 }
 
-//TODO: listar e contar tags (3.)
-
 %}
 
 %option yylineno
@@ -250,11 +248,28 @@ void post_print(gpointer post, gpointer user_data) {
     printf("\t<a href=%s%s.html>%s</a><br>\n", prefix->str, p->id->str, p->title->str);
 }
 
+FILE *tag_count;
+
 gboolean print_tag_info(gpointer tag, gpointer posts, gpointer user_data) {
     printf("<p><b>%s:</b></p>\n", ((GString *)tag)->str);
-    //printf("%s - %d\n", ((GString *)tag)->str, g_sequence_get_length((GSequence *)posts)
+
+    fprintf(tag_count, "%s - %d\n", ((GString *)tag)->str, g_sequence_get_length((GSequence *)posts));
+
     g_sequence_foreach((GSequence *)posts, post_print, NULL);
     return TRUE;
+}
+
+guint str_hash(gconstpointer a) {
+    guint h = 0;
+    char *str = ((GString *)a)->str;
+    do {
+        h += (guint)*str;
+    } while (*(++str));
+    return h;
+}
+
+gboolean str_equal(gconstpointer a, gconstpointer b) {
+    return strcmp(((GString *)a)->str, ((GString *)b)->str) == 0;
 }
 
 int main(int argc, char **argv) {
@@ -267,8 +282,13 @@ int main(int argc, char **argv) {
         prefix = g_string_new("./");
     }
     posts = g_hash_table_new(pub_hash, pub_equal);
-    tag_index = g_hash_table_new(g_str_hash, (GEqualFunc)g_string_equal);
+    tag_index = g_hash_table_new(str_hash, str_equal);
     yylex();
+
+    // open tag_count file
+    GString *file = g_string_new(prefix->str);
+    g_string_append(file, "tag_count.txt");
+    tag_count = fopen(file->str, "w");
 
     // print tag index to stdout
     printf("<!DOCTYPE html>\n<html>\n<body>\n<meta charset=\"UTF-8\">\n");
