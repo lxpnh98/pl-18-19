@@ -8,3 +8,4 @@ build:
 
 clean:
 	rm -f $(PROGRAM) lex.yy.c
+

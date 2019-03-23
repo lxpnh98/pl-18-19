@@ -21,10 +21,6 @@ struct pub {
     GSequence *tags;
 } *pub;
 
-void destroy_tag(gpointer t) {
-    g_string_free((GString *)t, TRUE);
-}
-
 void pub_new(void) {
     pub = malloc(sizeof(struct pub));
     if (!pub) {
@@ -36,12 +32,12 @@ void pub_new(void) {
     pub->cat   = g_string_new(NULL);
     pub->author_date  = g_string_new(NULL);
     pub->text  = g_string_new(NULL);
-    pub->tags  = g_sequence_new(destroy_tag);
+    pub->tags  = g_sequence_new(NULL);
 }
 
 void pub_free(void) {
-    g_string_free(pub->id, TRUE);
-    g_string_free(pub->title, TRUE);
+    //g_string_free(pub->id, TRUE);
+    //g_string_free(pub->title, TRUE);
     g_string_free(pub->cat, TRUE);
     g_string_free(pub->author_date, TRUE);
     g_string_free(pub->text, TRUE);
@@ -52,16 +48,30 @@ void pub_free(void) {
 GString *prefix;
 FILE *html;
 
-void tag_print(gpointer data, gpointer user_data) {
-    fprintf(html, "<tag>%s</tag>", ((GString *)data)->str);
+void tag_print(gpointer tag, gpointer user_data) {
+    fprintf(html, "<tag>%s</tag>", ((GString *)tag)->str);
 }
 
-int debug = 1;
+struct post_info {
+    GString *id;
+    GString *title;
+};
+
+int debug = 0;
 int line_num;
 
 GHashTable *posts;
 
 GHashTable *tag_index;
+
+void tag_add_post(gpointer tag, gpointer post) {
+    GSequence *seq = (GSequence *)g_hash_table_lookup(tag_index, tag);
+    if (seq == NULL) {
+        seq = g_sequence_new(NULL);
+    }
+    g_sequence_append(seq, post);
+    g_hash_table_replace(tag_index, tag, seq);
+}
 
 void pub_print(void) {
     if (strlen(pub->id->str) == 0) {
@@ -77,16 +87,23 @@ void pub_print(void) {
         return;
     }
 
+    g_hash_table_add(posts, g_string_new(pub->id->str));
+
+    struct post_info *post = malloc(sizeof(struct post_info));
+    post->id = pub->id;
+    post->title = pub->title;
+    g_sequence_foreach(pub->tags, tag_add_post, post);
+
     // abrir ficheiro post-????.html
     GString *file = g_string_new(prefix->str);
     g_string_append(file, pub->id->str);
     g_string_append(file, ".html");
     html = fopen(file->str, "w");
 
-    g_hash_table_add(posts, g_string_new(pub->id->str));
     if (debug) {
         gchar *line_num_str = g_strdup_printf("%i", line_num);
         fprintf(html, "<pub id=%s line=%s>\n", pub->id->str, line_num_str);
+        free(line_num_str);
     } else {
         fprintf(html, "<pub id=%s>\n", pub->id->str);
     }
@@ -99,6 +116,7 @@ void pub_print(void) {
     fprintf(html, "<text>%s</text>\n", pub->text->str);
     fprintf(html, "</pub>\n");
 
+    g_string_free(file, TRUE);
     fclose(html);
 }
 
@@ -198,8 +216,16 @@ gboolean pub_equal(gconstpointer a, gconstpointer b) {
     return (gboolean)(strcmp(id_a->str, id_b->str) == 0);
 }
 
-int yywrap() {
-    return 1;
+void post_print(gpointer post, gpointer user_data) {
+    struct post_info *p = ((struct post_info *)post);
+    printf("\t<a href=%s%s.html>%s</a><br>\n", prefix->str, p->id->str, p->title->str);
+}
+
+gboolean print_tag_info(gpointer tag, gpointer posts, gpointer user_data) {
+    printf("<p><b>%s:</b></p>\n", ((GString *)tag)->str);
+    //printf("%s - %d\n", ((GString *)tag)->str, g_sequence_get_length((GSequence *)posts)
+    g_sequence_foreach((GSequence *)posts, post_print, NULL);
+    return TRUE;
 }
 
 int main(int argc, char **argv) {
@@ -214,5 +240,11 @@ int main(int argc, char **argv) {
     posts = g_hash_table_new(pub_hash, pub_equal);
     tag_index = g_hash_table_new(g_str_hash, (GEqualFunc)g_string_equal);
     yylex();
+    g_hash_table_foreach_remove(tag_index, print_tag_info, NULL);
     return 0;
 }
+
+int yywrap() {
+    return 1;
+}
+
