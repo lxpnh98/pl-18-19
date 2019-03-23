@@ -47,9 +47,14 @@ void pub_free(void) {
 
 GString *prefix;
 FILE *html;
+FILE *xml;
 
-void tag_print(gpointer tag, gpointer user_data) {
-    fprintf(html, "<tag>%s</tag>", ((GString *)tag)->str);
+void tag_print_xml(gpointer tag, gpointer user_data) {
+    fprintf(xml, "<tag>%s</tag>", ((GString *)tag)->str);
+}
+
+void tag_print_html(gpointer tag, gpointer user_data) {
+    fprintf(html, "#%s ", ((GString *)tag)->str);
 }
 
 struct post_info {
@@ -71,6 +76,43 @@ void tag_add_post(gpointer tag, gpointer post) {
     }
     g_sequence_append(seq, post);
     g_hash_table_replace(tag_index, tag, seq);
+}
+
+void print_xml(FILE *xml) {
+    if (debug) {
+        gchar *line_num_str = g_strdup_printf("%i", line_num);
+        fprintf(xml, "<pub id=%s line=%s>\n", pub->id->str, line_num_str);
+        free(line_num_str);
+    } else {
+        fprintf(xml, "<pub id=%s>\n", pub->id->str);
+    }
+    fprintf(xml, "<title>%s</title>\n", pub->title->str);
+    fprintf(xml, "<author_date>%s</author_date>\n", pub->author_date->str);
+    fprintf(xml, "<tags>\n");
+    g_sequence_foreach(pub->tags, tag_print_xml, NULL);
+    fprintf(xml, "\n</tags>\n");
+    fprintf(xml, "<category>%s</category>\n", pub->cat->str);
+    fprintf(xml, "<text>%s</text>\n", pub->text->str);
+    fprintf(xml, "</pub>\n");
+}
+
+void print_html(FILE *html) {
+    fprintf(html, "<!DOCTYPE html>\n<html>\n<body>\n<meta charset=\"UTF-8\">\n");
+
+    fprintf(html, "<h1>%s</h1>\n", pub->title->str);
+
+    gchar **paragraphs = g_strsplit(pub->text->str, "\n\n", 0);
+    do {
+        fprintf(html, "<p>%s</p>\n", *paragraphs);
+    } while (*(++paragraphs));
+    fprintf(html, "<hr>\n");
+    fprintf(html, "<p>");
+    g_sequence_foreach(pub->tags, tag_print_html, NULL);
+    fprintf(html, "</p>\n");
+    fprintf(html, "<p>%s</p>\n", pub->author_date->str);
+    fprintf(html, "<p>Category: %s</p>\n", pub->cat->str);
+
+    fprintf(html, "</html>\n</body>\n");
 }
 
 void pub_print(void) {
@@ -100,35 +142,21 @@ void pub_print(void) {
     g_string_append(file, ".html");
     html = fopen(file->str, "w");
 
-    if (debug) {
-        gchar *line_num_str = g_strdup_printf("%i", line_num);
-        fprintf(html, "<pub id=%s line=%s>\n", pub->id->str, line_num_str);
-        free(line_num_str);
-    } else {
-        fprintf(html, "<pub id=%s>\n", pub->id->str);
-    }
-    fprintf(html, "<title>%s</title>\n", pub->title->str);
-    fprintf(html, "<author_date>%s</author_date>\n", pub->author_date->str);
-    fprintf(html, "<tags>\n");
-    g_sequence_foreach(pub->tags, tag_print, NULL);
-    fprintf(html, "\n</tags>\n");
-    fprintf(html, "<category>%s</category>\n", pub->cat->str);
-    fprintf(html, "<text>%s</text>\n", pub->text->str);
-    fprintf(html, "</pub>\n");
+    // abrir ficheiro post-????.xml
+    file = g_string_new(prefix->str);
+    g_string_append(file, pub->id->str);
+    g_string_append(file, ".xml");
+    xml = fopen(file->str, "w");
+
+    print_xml(xml);
+    print_html(html);
 
     g_string_free(file, TRUE);
     fclose(html);
+    fclose(xml);
 }
 
 //TODO: listar e contar tags (3.)
-
-/*TODO:
-    tag_a:
-        <a href=post-????.html>titulo</a>
-    tag_b:
-        ...
-    ...
-*/
 
 %}
 
@@ -165,8 +193,9 @@ punc   [-+!?,.;:"']
     BEGIN PUB;
 }
 <TAGS>tag:\{({punc}|{letter}|\ |\n)+/\} {
-    //TODO: retirar \n do meio da tag
-    g_sequence_append(pub->tags, g_string_new(yytext+5));
+    gchar **strv = g_strsplit(yytext+5, "\n", 0);
+    gchar *tag = g_strjoinv(" ", strv);
+    g_sequence_append(pub->tags, g_string_new(tag));
 }
 <PUB>#ID:\{/p {
     BEGIN ID;
@@ -240,7 +269,12 @@ int main(int argc, char **argv) {
     posts = g_hash_table_new(pub_hash, pub_equal);
     tag_index = g_hash_table_new(g_str_hash, (GEqualFunc)g_string_equal);
     yylex();
+
+    // print tag index to stdout
+    printf("<!DOCTYPE html>\n<html>\n<body>\n<meta charset=\"UTF-8\">\n");
     g_hash_table_foreach_remove(tag_index, print_tag_info, NULL);
+    printf("</html>\n</body>\n");
+
     return 0;
 }
 
