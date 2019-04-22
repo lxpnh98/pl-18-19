@@ -1,5 +1,4 @@
 # a)
-# TODO: relacionar com ano de escrita (para cada local, pôr uma lista dos anos em que forão escritas as cartas?)
 
 BEGIN {FS=";"}
 
@@ -14,7 +13,11 @@ $3 ~ /\w+/ {
         conta[locais[l]][data[1]]++;
     }
 }
-$3 ~ /^\s*$/ {conta["NIL"]++}
+$3 ~ /^\s*$/ && $2 ~ /[0-9.]+/{
+    gsub(/ /, "", $2);
+    split($2, data, ".");
+    conta["NIL"][data[1]]++
+}
 
 END {
     for (k in conta) {
