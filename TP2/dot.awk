@@ -10,8 +10,8 @@ BEGIN {
 $5  {
     gsub(/ /, "", $5);
     split($5, infos, ":");
-    escritores[infos[1]]++; // Autores
-    escritores[infos[2]]++; // Destinatarios
+    escritores[infos[1]]++; # Autores
+    escritores[infos[2]]++; # Destinatarios
     if (escritores[infos[1]] == 1) {
         nodos[infos[1]] = ++i;
     }
