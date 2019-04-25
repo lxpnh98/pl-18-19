@@ -1,10 +1,11 @@
 # d)
 
-BEGIN { FS = ";"
-	    dot = "graph.dot";
-	    print "digraph{" > dot;
-	    print "rankdir = LR" > dot;
-	  }
+BEGIN {
+    FS = ";"
+    dot = "graph.dot";
+    print "digraph{" > dot;
+    print "rankdir = LR" > dot;
+}
 
 $5 	  { gsub(/ /, "", $5);
     	split($5, infos, ":");
