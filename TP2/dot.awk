@@ -7,7 +7,7 @@ BEGIN {
     print "rankdir = LR" > dot;
 }
 
-$2 	  { gsub(/ /, "", $2);
+	  { gsub(/ /, "", $2);
     	split($2, data, ".");
 		gsub(/ /, "", $5);
     	split($5, infos, ":");
