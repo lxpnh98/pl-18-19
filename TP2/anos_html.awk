@@ -20,9 +20,11 @@ END {
     print "<head>\n\t<meta charset=\"UTF-8\">\n" > "index.html"
     for (a in anos) {
         print "<p><a href=" a ".html" ">" a "</a></p>\n" > "index.html";
+        print "<!DOCTYPE html>\n<html>\n<body>\n" > a ".html"
         for (i in anos[a]) {
             print anos[a][i] > a ".html"
         }
+        print "</html>\n</body>\n" > a ".html"
     }
     print "</html>\n</body>\n" > "index.html"
 }
