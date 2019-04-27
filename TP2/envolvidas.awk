@@ -4,7 +4,7 @@ BEGIN {
     FS = ";"
 }
 
-$5  {
+    {
     gsub(/ /, "", $1);
     gsub(/ /, "", $5);
     split($5, envolv, ":");
