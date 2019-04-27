@@ -21,12 +21,6 @@ $2 	  { gsub(/ /, "", $2);
 	    }
         if (infos[1] != "" && infos[2] != "") {
             print infos[1] "->" infos[2] "[label=\" "data[3]"-"data[2]"-"data[1]" \"]" > dot;
-        } else if (infos[1] == "" && infos[2] == "") {
-            next;
-        } else if (infos[2] == "") {
-	    	print infos[1] "->" "Perdido" infos[2] "[label=\" "data[3]"-"data[2]"-"data[1]" \"]" > dot;
-	    } else if (infos[1] == ""){
-            print "Perdido" infos[1] "->" infos[2] "[label=\" "data[3]"-"data[2]"-"data[1]" \"]" > dot;
         }
 	  }
 
