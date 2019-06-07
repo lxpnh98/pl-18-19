@@ -3,88 +3,86 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "glib.h"
+
 int yylex();
 int yyerror();
 
-int tabid[26];
-int var_count = 0;
+typedef struct termo {
+    char *termo;
+    char *significado;
+    char *designacao_ingles;
+    GSequence *sinonimos;
+} *Termo;
 
-int label = 0;
+GHashTable *dicionario;
 
-int lookup(char var) {
-    return var_count > (var-'a');
+Termo termo_new(char *termo, char *significado, char* designacao_ingles, GSequence *sinonimos) {
+    Termo new = (Termo)malloc(sizeof(struct termo));
+    new->termo = strdup(termo);
+    new->significado = strdup(significado);
+    new->designacao_ingles = strdup(designacao_ingles);
+    new->sinonimos = g_sequence_new(NULL);
+    // iterar por sequência de sinonimos
+    GSequenceIter *iter = g_sequence_get_begin_iter(sinonimos);
+    while (!g_sequence_iter_is_end(iter)) {
+        char *s = (char *)g_sequence_get(iter);
+        g_sequence_append(new->sinonimos, strdup(s));
+        iter = g_sequence_iter_next(iter);
+    }
+    return new;
 }
 
 %}
 
-%union {char c; char *s; int i;};
-%token <i> INT
-%token <i> VAR
-%token VARS CODE END
-%token INTEGER READ PRINT IF THEN ELSE
+%union {char *s; GSequence *seq; Termo t;};
 
-%type <s> VARLIST SLIST DEC S EXP T F L CONDITION COND
+%token <s> TERMO
+%token <s> DESC
+
+%type <seq> Sinonimos
+%type <t> Def
 
 %%
 
-L   : VARS VARLIST CODE SLIST END {printf("%s\tstart\n%s\tstop\n", $2, $4);}
-
-VARLIST : DEC               {asprintf(&$$, "%s", $1);}
-        | DEC';' VARLIST    {asprintf(&$$, "%s%s", $1, $3);}
-        ;
-
-DEC     : VAR ':' TYPE      {asprintf(&$$, "\tpushi 0\n"); if (!lookup($1)) {tabid[$1-'a'] = var_count++;} else {yyerror("variável já declarada"); exit(1);}}
-        ;
-
-TYPE    : INTEGER
-        ;
-
-SLIST   : S                 {asprintf(&$$, "%s", $1);}
-        | S ';' SLIST       {asprintf(&$$, "%s%s", $1, $3);}
-        ;
-
-S   : READ '(' VAR ')'      {if (lookup($3)) {asprintf(&$$, "\tread\n\tatoi\n\tstoreg %d\n", $3-'a');} else {yyerror("variável não existe"); exit(1);}}
-    | PRINT '(' EXP ')'     {asprintf(&$$, "%s\twritei\n\tpushs \"\\n\"\n\twrites\n", $3);}
-    | VAR '=' EXP           {if (lookup($1)) {asprintf(&$$, "%s\tstoreg %d\n", $3, $1-'a');} else {yyerror("variável não existe"); exit(1);} }
-    | CONDITION             {asprintf(&$$, "%s", $1);}
-    ;
-
-CONDITION : IF '(' COND ')' '{' SLIST '}' ELSE '{' SLIST '}' {
-    asprintf(&$$, "%s"
-                 "\tjz L%d\n"
-                 "%s"
-                 "\tjump L%d\n"
-                 "L%d: nop\n"
-                 "%s"
-                 "L%d: nop\n", $3, label, $6, label+1, label, $10, label+1); label += 2;}
-
-COND : EXP     {asprintf(&$$, "%s", $1);}
+DicI : Def DicI {Termo t=$1; g_hash_table_insert(dicionario, t->termo, t); }
+     |
      ;
 
-EXP : EXP '+' T             {asprintf(&$$, "%s%s\tadd\n", $1, $3);}
-    | EXP '-' T             {asprintf(&$$, "%s%s\tsub\n", $1, $3);}
-    | T                     {asprintf(&$$, "%s", $1);}
-    ;
+Def : TERMO '(' TERMO ')' ':' DESC '[' Sinonimos ']' {$$ = termo_new($1, $3, $6, $8);}
 
-T   : T '*' F               {asprintf(&$$, "%s%s\tmul\n", $1, $3);}
-    | T '/' F               {asprintf(&$$, "%s%s\tdiv\n", $1, $3);}
-    | F                     {asprintf(&$$, "%s", $1);}
-    ;
 
-F   : INT                   {asprintf(&$$, "\tpushi %d\n", $1);}
-    | VAR                   {if (lookup($1)) {asprintf(&$$, "\tpushg %d\n", tabid[$1-'a']);} else {yyerror("variável não existe"); exit(1);}}
-    | '(' EXP ')'           {asprintf(&$$, "%s", $2);}
-    ;
+Sinonimos : TERMO ',' Sinonimos     {$$ = $3; g_sequence_append($$, $1);}
+          | TERMO                   {$$ = g_sequence_new(NULL); g_sequence_append($$, $1);}
+          |                         {$$ = g_sequence_new(NULL); }
+          ;
 
 %%
 
 #include "lex.yy.c"
 
 int yyerror(char *s) {
-    printf("lpis: %s\n", s);
+    printf("sati: %s\n", s);
     return 1;
 }
 
+guint strhash(gconstpointer key) {
+    GString *s = g_string_new((char *)key);
+    return g_string_hash(s);
+}
+
+gboolean mystrcmp (gconstpointer a, gconstpointer b) {
+    GString *s1 = g_string_new((char *)a);
+    GString *s2 = g_string_new((char *)b);
+    return g_string_equal(s1, s2);
+}
+
+void init() {
+    dicionario = g_hash_table_new(strhash, mystrcmp);
+}
+
 int main() {
+    init();
     yyparse();
 }
+

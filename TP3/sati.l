@@ -2,22 +2,46 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
+#include "glib.h"
+
 %}
 
 %option noyywrap
 
 let [_a-zA-Z\x80-\xf3]
 num [0-9]
+pont [\-.]
 
 %%
 
-[\(\):\[\],]    {ECHO;/*return yytext[0];*/}
-({let}|{num})+        {ECHO; char *s=strdup(yytext); /*return TERMO;*/}
-\"(\n|[^"]|\\\")*\" {yytext[yyleng-1]='\0'; char *s=strdup(yytext+1); printf("%s", s);/*return DESC;*/}
-.|\n            {}
+'([^']|(\\'))*' {
+    ECHO;
+    yytext[yyleng-1]='\0';
+    #ifdef FLEX
+    char *s=strdup(yytext+1);
+    #else
+    yylval.s=yytext+1;
+    return TERMO;
+    #endif
+}
+\"(\n|[^"]|\\\")*\" {
+    ECHO;
+    yytext[yyleng-1]='\0';
+    #ifdef FLEX
+    char *s=strdup(yytext+1);
+    #else
+    yylval.s=yytext+1;
+    return DESC;
+    #endif
+}
+[\(\):\[\],]        {ECHO; return yytext[0];}
+.|\n                {ECHO; }
 
 %%
 
+#ifdef FLEX
 int main() {
     yylex();
 }
+#endif
