@@ -237,30 +237,31 @@ void dicionario_apply(char *input) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 2) {
+    if (argc < 3) {
         fprintf(stderr, "Número de argumentos insuficiente.\n"
-                        "Utilização: sati <dicionario> [<ficheiro>...]]\n");
+                        "Utilização: sati <dicionario> <ficheiro>...\n");
         return 1;
     }
-    yyin = fopen(argv[1], "r"); // dicionario
+
+    // dicionario
+    if ( (yyin = fopen(argv[1], "r")) == NULL) {
+        fprintf(stderr, "sati: dictionary file %s not found\n", argv[1]);
+        return 2;
+    }
 
     dicionario_parse();
     //dicionario_print();
 
-    if (argc == 2) { // ler do stdin
-    } else { // ler da lista de ficheiros
-        int num_files = argc-2;
-        char *files[num_files];
-        GError *error;
-        for (int i = 0; i < num_files; i++) {
-            if (g_file_get_contents(argv[i+2], &files[i], NULL, &error) == FALSE) {
-                fprintf(stderr, "Não conseguiu abrir ficheiro \"%s\"\n", argv[i+2]);
-                return 2;
-            }
+    int num_files = argc-2;
+    char *files[num_files];
+    for (int i = 0; i < num_files; i++) {
+        if (!g_file_get_contents(argv[i+2], &files[i], NULL, NULL)) {
+            fprintf(stderr, "sati: file %s not found\n", argv[i+2]);
+            return 3;
         }
-        for (int i = 0; i < num_files; i++) {
-            dicionario_apply(files[i]);
-        }
+    }
+    for (int i = 0; i < num_files; i++) {
+        dicionario_apply(files[i]);
     }
 
     return 0;

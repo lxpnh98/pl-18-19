@@ -5,6 +5,9 @@
 
 #include "glib.h"
 
+// para ignorar os warnings do lex
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 %}
 
 %option noyywrap
