@@ -98,13 +98,166 @@ gboolean mystrcmp (gconstpointer a, gconstpointer b) {
     return g_string_equal(s1, s2);
 }
 
-void init() {
+void dicionario_parse() {
     dicionario = g_hash_table_new(strhash, mystrcmp);
+    yyparse();
 }
 
-int main() {
-    init();
-    yyparse();
-    dicionario_print();
+typedef struct procura {
+    char *termo;
+    int posicao_inicial;
+    int posicao;
+} *Procura;
+
+Procura procura_new(char *termo, int posicao_inicial) {
+    Procura new = (Procura)malloc(sizeof(struct procura));
+    new->termo = strdup(termo);
+    new->posicao_inicial = posicao_inicial;
+    new->posicao = 0;
+    return new;
+}
+
+gint procura_cmp(gconstpointer a, gconstpointer b, void *data) {
+    Procura p1 = (Procura)a;
+    Procura p2 = (Procura)b;
+    if (p1 == NULL || p1 == NULL) return 0;
+    return strcmp(p1->termo, p1->termo);
+}
+
+void procura_free(gpointer data) {
+    Procura p = (Procura)data;
+    free(p->termo);
+    free(p);
+}
+
+gint int_cmp(gconstpointer a, gconstpointer b) {
+    int *x = (int *)a;
+    int *y = (int *)y;
+    if (x == NULL || y == NULL) return 0;
+    if (*x <  *y) return -1;
+    if (*x == *y) return  0;
+    else          return  1;
+}
+
+typedef struct context {
+    int pos_procura;
+    GSequence *matches;
+    GSequence *procuras;
+} Context;
+
+gboolean identificar_matches(gpointer key, gpointer value, gpointer data) {
+    int *posicao = (int *)key;
+    Procura p = (Procura)value;
+    Context *c = (Context *)data;
+
+    if (*posicao < c->pos_procura) {
+        /*
+        GSequenceIter *iter = g_sequence_get_begin_iter(c->procuras);
+        while (!g_sequence_iter_is_end(iter)) {
+            Procura p = (Procura)g_sequence_get(iter);
+
+            iter = g_sequence_iter_next(iter);
+        }
+        */
+        Termo t = (Termo)g_hash_table_lookup(dicionario, p->termo);
+        termo_print(t);
+        g_sequence_append(c->matches, posicao);
+        return FALSE;
+    } else {
+        return TRUE; // para travessia
+    }
+}
+
+void dicionario_apply(char *input) {
+    
+    GSequence *procura_atual = g_sequence_new(procura_free);
+    GTree *matches = g_tree_new(int_cmp);
+    int pos_match = INT_MAX;
+    for (int i = 0; input[i] != '\0'; i++) {
+        int pos_procura = INT_MAX;
+
+        // processar próximo catactere do input para as matches imcompletas
+        {
+        GSequenceIter *iter = g_sequence_get_begin_iter(procura_atual);
+        while (!g_sequence_iter_is_end(iter)) {
+            Procura p = (Procura)g_sequence_get(iter);
+            pos_procura = (pos_procura <= p->posicao_inicial ? pos_procura : p->posicao_inicial);
+            printf("na procura do termo %s (pos_procura = %d)\n", p->termo, pos_procura);
+            if (p->termo[p->posicao] != '\0' && p->termo[p->posicao] == input[i]) { // ir para próximo caractere
+                p->posicao++;
+                if (p->termo[p->posicao] == '\0') {
+                    Procura p2 = procura_new(p->termo, p->posicao_inicial);
+                    g_tree_insert(matches, &p2->posicao_inicial, p2);
+                    g_sequence_remove(iter);
+                }
+            } else if (p->termo[p->posicao] != '\0') { // remover da lista 
+                g_sequence_remove(iter);
+            }
+            iter = g_sequence_iter_next(iter);
+        }
+        }
+
+        printf("\n");
+        fflush(stdout);
+
+        // procurar novas matches
+        {
+        GHashTableIter iter;
+        gpointer termo, match;
+        g_hash_table_iter_init(&iter, dicionario);
+        while (g_hash_table_iter_next(&iter, &termo, &match)) {
+            if (((char *)termo)[0] == input[i]) {
+                printf("adicionou termo na procura atual: %s (posicao %d).\n", (char *)termo, i);
+                Procura p = procura_new((char *)termo, i);
+                p->posicao++;
+                g_sequence_append(procura_atual, p);
+            }
+        }
+        }
+
+        Context c = {.pos_procura=pos_procura, .matches=g_sequence_new(NULL), .procuras=procura_atual};
+        g_tree_foreach(matches, identificar_matches, &c);
+
+        GSequenceIter *iter = g_sequence_get_begin_iter(c.matches);
+        while (!g_sequence_iter_is_end(iter)) {
+            int *key = (int *)g_sequence_get(iter);
+
+            g_tree_remove(matches, key);
+            iter = g_sequence_iter_next(iter);
+        }
+
+        fprintf(stdout, "%c\n---\n", input[i]);
+    }
+    g_sequence_free(procura_atual);
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Número de argumentos insuficiente.\n"
+                        "Utilização: sati <dicionario> [<ficheiro>...]]\n");
+        return 1;
+    }
+    yyin = fopen(argv[1], "r"); // dicionario
+
+    dicionario_parse();
+    //dicionario_print();
+
+    if (argc == 2) { // ler do stdin
+    } else { // ler da lista de ficheiros
+        int num_files = argc-2;
+        char *files[num_files];
+        GError *error;
+        for (int i = 0; i < num_files; i++) {
+            if (g_file_get_contents(argv[i+2], &files[i], NULL, &error) == FALSE) {
+                fprintf(stderr, "Não conseguiu abrir ficheiro \"%s\"\n", argv[i+2]);
+                return 2;
+            }
+        }
+        for (int i = 0; i < num_files; i++) {
+            dicionario_apply(files[i]);
+        }
+    }
+
+    return 0;
 }
 
