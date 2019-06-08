@@ -16,7 +16,6 @@ pont [\-.]
 %%
 
 '([^']|(\\'))*' {
-    ECHO;
     yytext[yyleng-1]='\0';
     #ifdef FLEX
     char *s=strdup(yytext+1);
@@ -26,7 +25,6 @@ pont [\-.]
     #endif
 }
 \"(\n|[^"]|\\\")*\" {
-    ECHO;
     yytext[yyleng-1]='\0';
     #ifdef FLEX
     char *s=strdup(yytext+1);
@@ -35,8 +33,8 @@ pont [\-.]
     return DESC;
     #endif
 }
-[\(\):\[\],]        {ECHO; return yytext[0];}
-.|\n                {ECHO; }
+[\(\):\[\],]        {return yytext[0];}
+.|\n                {}
 
 %%
 

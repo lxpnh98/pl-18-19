@@ -10,14 +10,14 @@ int yyerror();
 
 typedef struct termo {
     char *termo;
-    char *significado;
     char *designacao_ingles;
+    char *significado;
     GSequence *sinonimos;
 } *Termo;
 
 GHashTable *dicionario;
 
-Termo termo_new(char *termo, char *significado, char* designacao_ingles, GSequence *sinonimos) {
+Termo termo_new(char *termo, char* designacao_ingles, char *significado, GSequence *sinonimos) {
     Termo new = (Termo)malloc(sizeof(struct termo));
     new->termo = strdup(termo);
     new->significado = strdup(significado);
@@ -31,6 +31,27 @@ Termo termo_new(char *termo, char *significado, char* designacao_ingles, GSequen
         iter = g_sequence_iter_next(iter);
     }
     return new;
+}
+
+void termo_print(Termo t) {
+    fprintf(stderr, "'%s' ('%s'): \"%s\"\n", t->termo, t->designacao_ingles, t->significado);
+    GSequenceIter *iter = g_sequence_get_begin_iter(t->sinonimos);
+    fprintf(stderr, "[ ");
+    while (!g_sequence_iter_is_end(iter)) {
+        char *s = (char *)g_sequence_get(iter);
+        fprintf(stderr, "%s, ", s);
+        iter = g_sequence_iter_next(iter);
+    }
+    fprintf(stderr, " ]\n");
+}
+
+void _termo_print(gpointer key, gpointer value, gpointer user_data) {
+    Termo t = (Termo)value;
+    termo_print(t);
+}
+
+void dicionario_print() {
+    g_hash_table_foreach(dicionario, _termo_print, NULL);
 }
 
 %}
@@ -52,8 +73,8 @@ DicI : Def DicI {Termo t=$1; g_hash_table_insert(dicionario, t->termo, t); }
 Def : TERMO '(' TERMO ')' ':' DESC '[' Sinonimos ']' {$$ = termo_new($1, $3, $6, $8);}
 
 
-Sinonimos : TERMO ',' Sinonimos     {$$ = $3; g_sequence_append($$, $1);}
-          | TERMO                   {$$ = g_sequence_new(NULL); g_sequence_append($$, $1);}
+Sinonimos : TERMO ',' Sinonimos     {$$ = $3; g_sequence_prepend($$, $1);}
+          | TERMO                   {$$ = g_sequence_new(NULL); g_sequence_prepend($$, $1);}
           |                         {$$ = g_sequence_new(NULL); }
           ;
 
@@ -84,5 +105,6 @@ void init() {
 int main() {
     init();
     yyparse();
+    dicionario_print();
 }
 
