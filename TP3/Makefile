@@ -1,4 +1,4 @@
-CFLAGS=-g `pkg-config --libs glib-2.0` `pkg-config --cflags glib-2.0`
+CFLAGS=-Wall -g `pkg-config --libs glib-2.0` `pkg-config --cflags glib-2.0`
 
 all:
 	flex sati.l

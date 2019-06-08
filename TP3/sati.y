@@ -104,9 +104,10 @@ void dicionario_parse() {
 }
 
 typedef struct procura {
-    char *termo;
     int posicao_inicial;
+    char *termo;
     int posicao;
+    int ignorar;
 } *Procura;
 
 Procura procura_new(char *termo, int posicao_inicial) {
@@ -114,14 +115,15 @@ Procura procura_new(char *termo, int posicao_inicial) {
     new->termo = strdup(termo);
     new->posicao_inicial = posicao_inicial;
     new->posicao = 0;
+    new->ignorar = 0;
     return new;
 }
 
 gint procura_cmp(gconstpointer a, gconstpointer b, void *data) {
     Procura p1 = (Procura)a;
     Procura p2 = (Procura)b;
-    if (p1 == NULL || p1 == NULL) return 0;
-    return strcmp(p1->termo, p1->termo);
+    if (p1 == NULL || p2 == NULL) return 0;
+    return strcmp(p1->termo, p2->termo);
 }
 
 void procura_free(gpointer data) {
@@ -142,7 +144,6 @@ gint int_cmp(gconstpointer a, gconstpointer b) {
 typedef struct context {
     int pos_procura;
     GSequence *matches;
-    GSequence *procuras;
 } Context;
 
 gboolean identificar_matches(gpointer key, gpointer value, gpointer data) {
@@ -151,14 +152,6 @@ gboolean identificar_matches(gpointer key, gpointer value, gpointer data) {
     Context *c = (Context *)data;
 
     if (*posicao < c->pos_procura) {
-        /*
-        GSequenceIter *iter = g_sequence_get_begin_iter(c->procuras);
-        while (!g_sequence_iter_is_end(iter)) {
-            Procura p = (Procura)g_sequence_get(iter);
-
-            iter = g_sequence_iter_next(iter);
-        }
-        */
         Termo t = (Termo)g_hash_table_lookup(dicionario, p->termo);
         termo_print(t);
         g_sequence_append(c->matches, posicao);
@@ -170,9 +163,8 @@ gboolean identificar_matches(gpointer key, gpointer value, gpointer data) {
 
 void dicionario_apply(char *input) {
     
-    GSequence *procura_atual = g_sequence_new(procura_free);
+    GSequence *procura_atual = g_sequence_new(NULL/*procura_free*/);
     GTree *matches = g_tree_new(int_cmp);
-    int pos_match = INT_MAX;
     for (int i = 0; input[i] != '\0'; i++) {
         int pos_procura = INT_MAX;
 
@@ -181,6 +173,10 @@ void dicionario_apply(char *input) {
         GSequenceIter *iter = g_sequence_get_begin_iter(procura_atual);
         while (!g_sequence_iter_is_end(iter)) {
             Procura p = (Procura)g_sequence_get(iter);
+            if (p->ignorar) {
+                iter = g_sequence_iter_next(iter);
+                continue;
+            }
             pos_procura = (pos_procura <= p->posicao_inicial ? pos_procura : p->posicao_inicial);
             printf("na procura do termo %s (pos_procura = %d)\n", p->termo, pos_procura);
             if (p->termo[p->posicao] != '\0' && p->termo[p->posicao] == input[i]) { // ir para próximo caractere
@@ -188,17 +184,27 @@ void dicionario_apply(char *input) {
                 if (p->termo[p->posicao] == '\0') {
                     Procura p2 = procura_new(p->termo, p->posicao_inicial);
                     g_tree_insert(matches, &p2->posicao_inicial, p2);
-                    g_sequence_remove(iter);
+                    p->ignorar = 1;
+                    //g_sequence_remove(iter);
                 }
             } else if (p->termo[p->posicao] != '\0') { // remover da lista 
-                g_sequence_remove(iter);
+                p->ignorar = 1;
+                //g_sequence_remove(iter);
             }
             iter = g_sequence_iter_next(iter);
         }
         }
 
-        printf("\n");
-        fflush(stdout);
+        {
+        GSequenceIter *iter = g_sequence_get_begin_iter(procura_atual);
+        while (!g_sequence_iter_is_end(iter)) {
+            Procura p = (Procura)g_sequence_get(iter);
+            if (p->ignorar) {
+                g_sequence_remove(iter);
+            }
+            iter = g_sequence_iter_next(iter);
+        }
+        }
 
         // procurar novas matches
         {
@@ -215,13 +221,12 @@ void dicionario_apply(char *input) {
         }
         }
 
-        Context c = {.pos_procura=pos_procura, .matches=g_sequence_new(NULL), .procuras=procura_atual};
+        Context c = {.pos_procura=pos_procura, .matches=g_sequence_new(NULL)};
         g_tree_foreach(matches, identificar_matches, &c);
 
         GSequenceIter *iter = g_sequence_get_begin_iter(c.matches);
         while (!g_sequence_iter_is_end(iter)) {
             int *key = (int *)g_sequence_get(iter);
-
             g_tree_remove(matches, key);
             iter = g_sequence_iter_next(iter);
         }
