@@ -231,7 +231,13 @@ void print_file(char *input) {
             printf("\\underline{%s}\\footnote{%s}", termo, t->designacao_ingles);
             i += strlen(termo) - 1;
         } else {
-            printf("%c", input[i]);
+            switch (input[i]) {
+                case '\n':
+                    printf("\n");
+                    //fall through
+                default:
+                    printf("%c", input[i]);
+            }
         }
     }
 }
@@ -286,7 +292,7 @@ int main(int argc, char **argv) {
     apendice_por_termo = g_hash_table_new(strhash, mystrcmp);
     printf("\\documentclass[12pt]{article}\n\\begin{document}\n");
     for (int i = 0; i < num_files; i++) {
-        printf("\\section{%s}\n", argv[i+2]);
+        printf("\\section*{%s}\n", argv[i+2]);
         dicionario_apply(files[i]);
         print_file(files[i]);
     }

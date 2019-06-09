@@ -18,6 +18,7 @@ pont [\-.]
 
 %%
 
+[\(\):\[\],]        {return yytext[0];}
 '([^']|(\\'))*' {
     yytext[yyleng-1]='\0';
     #ifdef FLEX
@@ -36,7 +37,6 @@ pont [\-.]
     return DESC;
     #endif
 }
-[\(\):\[\],]        {return yytext[0];}
 .|\n                {}
 
 %%
