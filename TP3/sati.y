@@ -290,7 +290,9 @@ int main(int argc, char **argv) {
 
     apendice_por_posicao = g_hash_table_new(g_direct_hash, g_direct_equal);
     apendice_por_termo = g_hash_table_new(strhash, mystrcmp);
-    printf("\\documentclass[12pt]{article}\n\\begin{document}\n");
+    printf("\\documentclass[12pt]{article}\n"
+           "\\usepackage[utf8]{inputenc}\n"
+           "\\begin{document}\n");
     for (int i = 0; i < num_files; i++) {
         printf("\\section*{%s}\n", argv[i+2]);
         dicionario_apply(files[i]);
