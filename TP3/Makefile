@@ -3,7 +3,7 @@ CFLAGS=-Wall -g `pkg-config --libs glib-2.0` `pkg-config --cflags glib-2.0`
 all:
 	flex sati.l
 	yacc -d sati.y
-	cc -o sati y.tab.c $(CFLAGS)
+	cc -o sati y.tab.c util.c $(CFLAGS)
 
 flex:
 	flex sati.l

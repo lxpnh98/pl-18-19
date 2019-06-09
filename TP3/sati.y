@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "glib.h"
+#include "util.h"
 
 int yylex();
 int yyerror();
@@ -15,7 +16,10 @@ typedef struct termo {
     GSequence *sinonimos;
 } *Termo;
 
+// termo -> Termo
 GHashTable *dicionario;
+// posicao_inicial -> termo
+GHashTable *apendice_por_posicao;
 
 Termo termo_new(char *termo, char* designacao_ingles, char *significado, GSequence *sinonimos) {
     Termo new = (Termo)malloc(sizeof(struct termo));
@@ -39,7 +43,7 @@ void termo_print(Termo t) {
     fprintf(stderr, "[ ");
     while (!g_sequence_iter_is_end(iter)) {
         char *s = (char *)g_sequence_get(iter);
-        fprintf(stderr, "%s, ", s);
+        fprintf(stderr, "'%s', ", s);
         iter = g_sequence_iter_next(iter);
     }
     fprintf(stderr, " ]\n");
@@ -87,17 +91,6 @@ int yyerror(char *s) {
     return 1;
 }
 
-guint strhash(gconstpointer key) {
-    GString *s = g_string_new((char *)key);
-    return g_string_hash(s);
-}
-
-gboolean mystrcmp (gconstpointer a, gconstpointer b) {
-    GString *s1 = g_string_new((char *)a);
-    GString *s2 = g_string_new((char *)b);
-    return g_string_equal(s1, s2);
-}
-
 void dicionario_parse() {
     dicionario = g_hash_table_new(strhash, mystrcmp);
     yyparse();
@@ -132,29 +125,21 @@ void procura_free(gpointer data) {
     free(p);
 }
 
-gint int_cmp(gconstpointer a, gconstpointer b) {
-    int *x = (int *)a;
-    int *y = (int *)y;
-    if (x == NULL || y == NULL) return 0;
-    if (*x <  *y) return -1;
-    if (*x == *y) return  0;
-    else          return  1;
-}
-
 typedef struct context {
     int pos_procura;
     GSequence *matches;
 } Context;
 
 gboolean identificar_matches(gpointer key, gpointer value, gpointer data) {
-    int *posicao = (int *)key;
+    uint64_t *posicao = key;
     Procura p = (Procura)value;
     Context *c = (Context *)data;
 
     if (*posicao < c->pos_procura) {
         Termo t = (Termo)g_hash_table_lookup(dicionario, p->termo);
-        termo_print(t);
+        //termo_print(t);
         g_sequence_append(c->matches, posicao);
+        g_hash_table_insert(apendice_por_posicao, (gpointer)*posicao, p->termo);
         return FALSE;
     } else {
         return TRUE; // para travessia
@@ -164,7 +149,7 @@ gboolean identificar_matches(gpointer key, gpointer value, gpointer data) {
 void dicionario_apply(char *input) {
     
     GSequence *procura_atual = g_sequence_new(NULL/*procura_free*/);
-    GTree *matches = g_tree_new(int_cmp);
+    GTree *matches = g_tree_new(intcmp);
     for (int i = 0; input[i] != '\0'; i++) {
         int pos_procura = INT_MAX;
 
@@ -178,12 +163,11 @@ void dicionario_apply(char *input) {
                 continue;
             }
             pos_procura = (pos_procura <= p->posicao_inicial ? pos_procura : p->posicao_inicial);
-            printf("na procura do termo %s (pos_procura = %d)\n", p->termo, pos_procura);
             if (p->termo[p->posicao] != '\0' && p->termo[p->posicao] == input[i]) { // ir para próximo caractere
                 p->posicao++;
                 if (p->termo[p->posicao] == '\0') {
                     Procura p2 = procura_new(p->termo, p->posicao_inicial);
-                    g_tree_insert(matches, &p2->posicao_inicial, p2);
+                    g_tree_insert(matches, &(p2->posicao_inicial), p2);
                     p->ignorar = 1;
                     //g_sequence_remove(iter);
                 }
@@ -213,7 +197,6 @@ void dicionario_apply(char *input) {
         g_hash_table_iter_init(&iter, dicionario);
         while (g_hash_table_iter_next(&iter, &termo, &match)) {
             if (((char *)termo)[0] == input[i]) {
-                printf("adicionou termo na procura atual: %s (posicao %d).\n", (char *)termo, i);
                 Procura p = procura_new((char *)termo, i);
                 p->posicao++;
                 g_sequence_append(procura_atual, p);
@@ -231,9 +214,24 @@ void dicionario_apply(char *input) {
             iter = g_sequence_iter_next(iter);
         }
 
-        fprintf(stdout, "%c\n---\n", input[i]);
+        //fprintf(stdout, "%c", input[i]);
     }
     g_sequence_free(procura_atual);
+}
+
+void print_output(char *input) {
+    printf("\\documentclass[12pt]{article}\n\\begin{document}\n");
+    for (uint64_t i = 0; input[i] != '\0'; i++) {
+        char *termo = g_hash_table_lookup(apendice_por_posicao, (gpointer)i);
+        if (termo) {
+            Termo t = g_hash_table_lookup(dicionario, termo);
+            printf("\\underline{%s}\\footnote{%s}", termo, t->designacao_ingles);
+            i += strlen(termo) - 1;
+        } else {
+            printf("%c", input[i]);
+        }
+    }
+    printf("\\end{document}\n");
 }
 
 int main(int argc, char **argv) {
@@ -260,9 +258,13 @@ int main(int argc, char **argv) {
             return 3;
         }
     }
+
+    apendice_por_posicao = g_hash_table_new(g_direct_hash, g_direct_equal/*inthash, intcmp*/);
     for (int i = 0; i < num_files; i++) {
         dicionario_apply(files[i]);
+        print_output(files[i]);
     }
+    
 
     return 0;
 }
