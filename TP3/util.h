@@ -3,6 +3,8 @@
 
 #include "glib.h"
 
+typedef void *unused;
+
 guint strhash(gconstpointer key);
 gboolean mystrcmp (gconstpointer a, gconstpointer b);
 gint intcmp(gconstpointer a, gconstpointer b);

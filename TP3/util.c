@@ -15,7 +15,7 @@ gboolean mystrcmp (gconstpointer a, gconstpointer b) {
 
 gint intcmp(gconstpointer a, gconstpointer b) {
     int *x = (int *)a;
-    int *y = (int *)y;
+    int *y = (int *)b;
     if (x == NULL || y == NULL) return 0;
     if (*x <  *y) return -1;
     if (*x == *y) return  0;
@@ -23,7 +23,7 @@ gint intcmp(gconstpointer a, gconstpointer b) {
 }
 
 guint inthash(gconstpointer key) {
-    int *i = (int *)i;
+    int *i = (int *)key;
     return *i;
 }
 
