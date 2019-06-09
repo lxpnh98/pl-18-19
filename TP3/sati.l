@@ -37,7 +37,9 @@ pont [\-.]
     return DESC;
     #endif
 }
-.|\n                {}
+[ \t\n]         {}
+.               {fprintf(stderr, "sati: syntax error on dictionary file\n"); exit(1);}
+
 
 %%
 
