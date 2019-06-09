@@ -232,9 +232,27 @@ void print_file(char *input) {
             i += strlen(termo) - 1;
         } else {
             switch (input[i]) {
+                case '&':
+                case '%':
+                case '$':
+                case '#':
+                case '_':
+                case '{':
+                case '}':
+                    printf("\\%c", input[i]);
+                    break;
+                case '~':
+                    printf("\\textasciitilde ");
+                    break;
+                case '^':
+                    printf("\\textasciicircum ");
+                    break;
+                case '\\':
+                    printf("\\textbackslash ");
+                    break;
                 case '\n':
-                    printf("\n");
-                    //fall through
+                    printf("\n\n");
+                    break;
                 default:
                     printf("%c", input[i]);
             }
@@ -292,6 +310,7 @@ int main(int argc, char **argv) {
     apendice_por_termo = g_hash_table_new(strhash, mystrcmp);
     printf("\\documentclass[12pt]{article}\n"
            "\\usepackage[utf8]{inputenc}\n"
+           "\\usepackage[T1]{fontenc}\n"
            "\\begin{document}\n");
     for (int i = 0; i < num_files; i++) {
         printf("\\section*{%s}\n", argv[i+2]);
