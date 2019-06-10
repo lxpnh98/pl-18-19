@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
            "\\usepackage[T1]{fontenc}\n"
            "\\begin{document}\n");
     for (int i = 0; i < num_files; i++) {
-        printf("\\section*{%s}\n", argv[i+2]);
+        printf("\\section*{%s}\n\\hspace{4mm}\n", argv[i+2]);
         dicionario_apply(files[i]);
         print_file(files[i]);
     }
