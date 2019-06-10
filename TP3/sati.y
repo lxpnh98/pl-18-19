@@ -234,31 +234,7 @@ void print_file(char *input) {
             printf("\\underline{%s}\\footnote{%s}", termo, t->designacao_ingles);
             i += strlen(termo) - 1;
         } else {
-            switch (input[i]) {
-                case '&':
-                case '%':
-                case '$':
-                case '#':
-                case '_':
-                case '{':
-                case '}':
-                    printf("\\%c", input[i]);
-                    break;
-                case '~':
-                    printf("\\textasciitilde ");
-                    break;
-                case '^':
-                    printf("\\textasciicircum ");
-                    break;
-                case '\\':
-                    printf("\\textbackslash ");
-                    break;
-                case '\n':
-                    printf("\n\n");
-                    break;
-                default:
-                    printf("%c", input[i]);
-            }
+            tex_escape(input[i]);
         }
     }
 }
@@ -324,7 +300,9 @@ int main(int argc, char **argv) {
                "\\end{adjustwidth*}}\n"
            "\\begin{document}\n");
     for (int i = 0; i < num_files; i++) {
-        printf("\\section*{%s}\n\\hspace{4mm}\n", argv[i+2]);
+        printf("\\section*{");
+        tex_escape_str(argv[i+2]);
+        printf("}\n\\hspace{4mm}\n");
         dicionario_apply(files[i]);
         print_file(files[i]);
     }

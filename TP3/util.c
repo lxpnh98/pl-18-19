@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "glib.h"
 
 #include "util.h"
@@ -27,3 +28,36 @@ guint inthash(gconstpointer key) {
     return *i;
 }
 
+void tex_escape(char c) {
+    switch (c) {
+        case '&':
+        case '%':
+        case '$':
+        case '#':
+        case '_':
+        case '{':
+        case '}':
+            printf("\\%c", c);
+            break;
+        case '~':
+            printf("\\textasciitilde ");
+            break;
+        case '^':
+            printf("\\textasciicircum ");
+            break;
+        case '\\':
+            printf("\\textbackslash ");
+            break;
+        case '\n':
+            printf("\n\n");
+            break;
+        default:
+            printf("%c", c);
+    }
+}
+
+void tex_escape_str(char *str) {
+    for (char *p = str; *p; p++) {
+        tex_escape(*p);
+    }
+}
