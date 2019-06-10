@@ -268,20 +268,23 @@ void print_entry(gpointer key, gpointer value, gpointer user_data) {
     (void)user_data;
     char *termo = (char *)key;
     Termo t = (Termo)g_hash_table_lookup(dicionario, termo);
-    printf("%s - %s: %s\\break\n", t->termo, t->designacao_ingles, t->significado);
-    GSequenceIter *iter = g_sequence_get_begin_iter(t->sinonimos);
-    //printf("[ ");
-    while (!g_sequence_iter_is_end(iter)) {
-        char *s = (char *)g_sequence_get(iter);
-        printf("%s\\break\n", s);
-        iter = g_sequence_iter_next(iter);
+    printf("\\noindent\\entry{%s}{%s}{%s}\n\n", t->termo, t->designacao_ingles, t->significado);
+    if (!g_sequence_is_empty(t->sinonimos)) {
+        GSequenceIter *iter = g_sequence_get_begin_iter(t->sinonimos);
+        printf("\\begin{itemize}\n");
+        while (!g_sequence_iter_is_end(iter)) {
+            char *s = (char *)g_sequence_get(iter);
+            printf("\\item \\noindent %s\n", s);
+            iter = g_sequence_iter_next(iter);
+        }
+        printf("\\end{itemize}\n");
     }
-    //printf(" ]\n");
 }
 
 void print_appendix(void) {
     printf("\\newpage\n\\appendix\n");
     g_hash_table_foreach(apendice_por_termo, print_entry, NULL);   
+    printf("\\newpage\n\\appendix\n");
 }
 
 int main(int argc, char **argv) {
@@ -314,6 +317,11 @@ int main(int argc, char **argv) {
     printf("\\documentclass[12pt]{article}\n"
            "\\usepackage[utf8]{inputenc}\n"
            "\\usepackage[T1]{fontenc}\n"
+           "\\usepackage{changepage}\n"
+           "\\newcommand{\\entry}[3]{\\markboth{#1}{#1}\\textbf{#1}\\ {(#2)}\n\n"
+               "\\begin{adjustwidth*}{2em}{2em}\n"
+               "\\textit{#3}\\ \n"
+               "\\end{adjustwidth*}}\n"
            "\\begin{document}\n");
     for (int i = 0; i < num_files; i++) {
         printf("\\section*{%s}\n\\hspace{4mm}\n", argv[i+2]);
