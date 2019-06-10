@@ -312,10 +312,9 @@ int main(int argc, char **argv) {
     printf("\\documentclass[12pt]{article}\n"
            "\\usepackage[utf8]{inputenc}\n"
            "\\usepackage[T1]{fontenc}\n"
-           "\\begin{document}\n"
-           "\\hspace{3mm}\n");
+           "\\begin{document}\n");
     for (int i = 0; i < num_files; i++) {
-        printf("\\section*{%s}\n", argv[i+2]);
+        printf("\\section*{%s}\n\\hspace{4mm}\n", argv[i+2]);
         dicionario_apply(files[i]);
         print_file(files[i]);
     }
