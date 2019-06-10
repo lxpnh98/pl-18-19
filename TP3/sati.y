@@ -146,7 +146,7 @@ gboolean identificar_matches(gpointer key, gpointer value, gpointer data) {
         g_hash_table_insert(apendice_por_termo, strdup(p->termo), NULL);
         return FALSE;
     } else {
-        return TRUE; // para travessia
+        return FALSE;
     }
 }
 
@@ -156,6 +156,7 @@ void dicionario_apply(char *input) {
     GTree *matches = g_tree_new(intcmp);
     for (int i = 0; input[i] != '\0'; i++) {
         int pos_procura = INT_MAX;
+        //fprintf(stderr, "---\n%c\n", input[i]);
 
         // processar próximo catactere do input para as matches imcompletas
         {
@@ -163,21 +164,22 @@ void dicionario_apply(char *input) {
         while (!g_sequence_iter_is_end(iter)) {
             Procura p = (Procura)g_sequence_get(iter);
             if (p->ignorar) {
+                //fprintf(stderr, "Ignorou termo %s\n", p->termo);
                 iter = g_sequence_iter_next(iter);
                 continue;
             }
+            //fprintf(stderr, "A processar procura de termo %s\n", p->termo);
             pos_procura = (pos_procura <= p->posicao_inicial ? pos_procura : p->posicao_inicial);
             if (p->termo[p->posicao] != '\0' && p->termo[p->posicao] == input[i]) { // ir para próximo caractere
                 p->posicao++;
                 if (p->termo[p->posicao] == '\0') {
                     Procura p2 = procura_new(p->termo, p->posicao_inicial);
                     g_tree_insert(matches, &(p2->posicao_inicial), p2);
+                    //fprintf(stderr, "Fez match de termo %s\n", p->termo);
                     p->ignorar = 1;
-                    //g_sequence_remove(iter);
                 }
             } else if (p->termo[p->posicao] != '\0') { // remover da lista 
                 p->ignorar = 1;
-                //g_sequence_remove(iter);
             }
             iter = g_sequence_iter_next(iter);
         }
@@ -218,7 +220,6 @@ void dicionario_apply(char *input) {
             iter = g_sequence_iter_next(iter);
         }
 
-        //fprintf(stdout, "%c", input[i]);
     }
     g_sequence_free(procura_atual);
 }
