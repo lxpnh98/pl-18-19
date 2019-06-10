@@ -1,0 +1,31 @@
+'linguagem de programação' ('programming language') :
+    "Método padronizado para comunicar instruções para um computador."
+    [
+    ]
+
+'programa de computador' ('computer program') :
+    "Conjunto de instruções que descrevem uma tarefa a ser realizada por um computador."
+    [
+    'programa',
+    'programa informático',
+    'executável',
+    ]
+
+'algoritmo' ('algorithm') :
+    "Uma sequência finita de ações executáveis que visam obter uma solução para um determinado tipo de problema."
+    [
+    'operação',
+    ]
+
+'código fonte' ('source code') :
+    "Conjunto de palavras ou símbolos escritos de forma ordenada, contendo instruções em uma das linguagens de programação existentes, de maneira lógica."
+    [
+    'código',
+    'fonte',
+    'programa',
+    ]
+
+'código de máquina' ('machine code') :
+    "Uma sequência de bytes que se tratam de instruções a serem executadas pelo processador."
+    [
+    ]
