@@ -121,7 +121,9 @@ gint procura_cmp(gconstpointer a, gconstpointer b, void *data) {
     Procura p1 = (Procura)a;
     Procura p2 = (Procura)b;
     if (p1 == NULL || p2 == NULL) return 0;
-    return strcmp(p1->termo, p2->termo);
+    int cmp1 = strcmp(p1->termo, p2->termo);
+    if (cmp1 != 0) return cmp1;
+    return intcmp(&p1->posicao_inicial, &p2->posicao_inicial);
 }
 
 void procura_free(gpointer data) {
